@@ -1,6 +1,5 @@
 #include "sqlite3.h"
 #include <stdio.h>
-#include <stdbool.h>
 
 typedef struct {
     int limitCode;
@@ -36,14 +35,10 @@ static void printLimits(sqlite3 *db) {
     }
 }
 
-int main(int argc, char **argv) {
+int main(void) {
     sqlite3 *db;
-    const int result = sqlite3_open(":memory:", &db);
-
-    if (result == SQLITE_OK) {
-        printLimits(db);
-        sqlite3_close(db);
-    }
-
+    sqlite3_open(":memory:", &db);
+    printLimits(db);
+    sqlite3_close(db);
     return 0;
 }
