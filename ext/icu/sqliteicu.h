@@ -1,3 +1,5 @@
+#define SQLITE_ICU_INIT(db) sqlite3IcuInit(db)
+
 /*
 ** 2008 May 26
 **
@@ -13,13 +15,14 @@
 ** This header file is used by programs that want to link against the
 ** ICU extension.  All it does is declare the sqlite3IcuInit() interface.
 */
+
 #include "sqlite3.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif  /* __cplusplus */
 
-int sqlite3IcuInit(sqlite3 *db);
+int SQLITE_ICU_INIT(sqlite3 *db);
 
 #ifdef __cplusplus
 }  /* extern "C" */
