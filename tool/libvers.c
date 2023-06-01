@@ -1,40 +1,50 @@
-#define DECLARE_PTRS const char *version, *source;
-#define INIT_SQLLIB(p) if (sqlite3_initialize() != SQLITE_OK) {\
-                              fprintf(stderr, "Failed to initialize SQLite library\n"); \
-                              return p; \
-                          }
-
-#define SHUTDOWN_LIB(p) if (sqlite3_shutdown() != SQLITE_OK) {\
-                              fprintf(stderr, "Failed to shutdown SQLite library\n"); \
-                              return p; \
-                          }
-
-#define GET_VERSION version = sqlite3_libversion();
-#define GET_SOURCE  source = sqlite3_sourceid();
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sqlite3.h>
 
+// Declare global pointers
+const char *version, *source;
+
+int init_sqlite() {
+    if (sqlite3_initialize() != SQLITE_OK) {
+        fprintf(stderr, "Failed to initialize SQLite library\n"); 
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+int shutdown_sqlite() {
+    if (sqlite3_shutdown() != SQLITE_OK) {
+        fprintf(stderr, "Failed to shutdown SQLite library\n"); 
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+void get_version() {
+    version = sqlite3_libversion();
+}
+
+void get_source() {
+    source = sqlite3_sourceid();
+}
 
 int main(int argc, char **argv){
 
-  DECLARE_PTRS
+    if(init_sqlite() == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
 
-  INIT_SQLLIB(EXIT_FAILURE)
+    get_version();
 
-  
-  GET_VERSION
+    get_source();
 
-  
-  GET_SOURCE
+    printf("SQLite version %s\n", version);
+    printf("SQLite source  %s\n", source);
 
-  
-  printf("SQLite version %s\n", version);
-  printf("SQLite source  %s\n", source);
+    if(shutdown_sqlite() == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
 
-  
-  SHUTDOWN_LIB(EXIT_FAILURE)
-  
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
