@@ -3,48 +3,72 @@
 #include <sqlite3.h>
 
 // Declare global pointers
-const char *version, *source;
+const char *version = NULL, *source = NULL;
 
 int init_sqlite() {
-    if (sqlite3_initialize() != SQLITE_OK) {
-        fprintf(stderr, "Failed to initialize SQLite library\n"); 
-        return EXIT_FAILURE;
+    int rc = sqlite3_initialize();
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to initialize SQLite library: %s\n", sqlite3_errstr(rc)); 
+        return rc;
     }
-    return EXIT_SUCCESS;
+    return SQLITE_OK;
 }
 
 int shutdown_sqlite() {
-    if (sqlite3_shutdown() != SQLITE_OK) {
-        fprintf(stderr, "Failed to shutdown SQLite library\n"); 
-        return EXIT_FAILURE;
+    int rc = sqlite3_shutdown();
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to shutdown SQLite library: %s\n", sqlite3_errstr(rc)); 
+        return rc;
     }
-    return EXIT_SUCCESS;
+    return SQLITE_OK;
 }
 
-void get_version() {
+int get_version() {
     version = sqlite3_libversion();
+    if (version == NULL) {
+        fprintf(stderr, "Failed to retrieve SQLite library version\n");
+        return SQLITE_ERROR;
+    }
+    return SQLITE_OK;
 }
 
-void get_source() {
+int get_source() {
     source = sqlite3_sourceid();
+    if (source == NULL) {
+        fprintf(stderr, "Failed to retrieve SQLite library source ID\n");
+        return SQLITE_ERROR;
+    }
+    return SQLITE_OK;
 }
 
 int main(int argc, char **argv){
 
-    if(init_sqlite() == EXIT_FAILURE) {
-        return EXIT_FAILURE;
+    int rc = EXIT_SUCCESS;
+
+    rc = init_sqlite();
+    if (rc != SQLITE_OK) {
+        goto cleanup;
     }
 
-    get_version();
+    rc = get_version();
+    if (rc != SQLITE_OK) {
+        goto cleanup;
+    }
 
-    get_source();
+    rc = get_source();
+    if (rc != SQLITE_OK) {
+        goto cleanup;
+    }
 
     printf("SQLite version %s\n", version);
     printf("SQLite source  %s\n", source);
 
-    if(shutdown_sqlite() == EXIT_FAILURE) {
+cleanup:
+    rc = shutdown_sqlite();
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to shutdown SQLite library: %s\n", sqlite3_errstr(rc)); 
         return EXIT_FAILURE;
     }
 
-    return EXIT_SUCCESS;
+    return rc == SQLITE_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }
