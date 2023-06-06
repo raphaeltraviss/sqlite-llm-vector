@@ -3,14 +3,16 @@
 #include "sqlite3.h"
 #include "fts3.h"
 
-static const struct {
-    const char* zName;
-    const sqlite3_module* pModule;
-} aModule[] = {
+typedef struct Module {
+    const char* name;
+    const sqlite3_module* module;
+} Module;
+
+static const Module aModule[] = {
     {"fts3",  &fts3Module},
     {"fts4",  &fts4Module},
     {"fts5",  &fts5Module},
-    {0, 0},
+    {NULL, NULL},
 };
 
 static const char* zStmt = "SELECT fts3_tokenizer(?, ?)";
@@ -29,12 +31,12 @@ int sqlite3Fts3Init(sqlite3* db) {
     if (rc != SQLITE_OK) {
         return rc;
     }
-    for (int i = 0; aModule[i].zName; i++) {
-        rc = sqlite3_create_module(db, aModule[i].zName, aModule[i].pModule, 0);
+    for (const Module* module = aModule; module->name; module++) {
+        rc = sqlite3_create_module(db, module->name, module->module, 0);
         if (rc != SQLITE_OK) {
             return rc;
         }
     }
-    rc = sqlite3_prepare_v2(db, zStmt, -1, &db->pTokenizer, 0);
+    rc = sqlite3_prepare_v2(db, zStmt, -1, &(db->pTokenizer), 0);
     return rc;
 }
