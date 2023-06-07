@@ -6,11 +6,9 @@ typedef struct {
     sqlite3_int64 value;
 } ClientData;
 
-/*
- * Remember function
- * Return the integer value V. Also, save the value of V in a
- * C-language variable whose address is PTR.
- */
+static void remember_func(sqlite3_context *, int, sqlite3_value **);
+static int sqlite3_remember_init(sqlite3 *, char **, const sqlite3_api_routines *);
+
 static void remember_func(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
     assert(argc == 2);
     
@@ -26,8 +24,20 @@ static void remember_func(sqlite3_context *ctx, int argc, sqlite3_value **argv) 
     sqlite3_result_int64(ctx, v);
 }
 
-int sqlite3_remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+static int sqlite3_remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
     int rc = SQLITE_ERROR;
     sqlite3_create_function_v2(db, "remember", 2, SQLITE_UTF8, NULL, &remember_func, NULL, NULL, &sqlite3_free);
     return SQLITE_OK;
+}
+
+int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+    int rc = SQLITE_ERROR;
+
+    rc = sqlite3_remember_init(db, pzErrMsg, pApi);
+    if (rc != SQLITE_OK) {
+        sqlite3_free(*pzErrMsg);
+        return rc;
+    }
+
+    return rc;
 }
