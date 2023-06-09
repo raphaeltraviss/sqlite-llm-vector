@@ -16,7 +16,7 @@ FILE *open_file(char *filename){
 }
 
 /* Function to read bytes from file */
-size_t read_from_file(FILE *f, int offset, char *buffer, int n){
+size_t read_from_file(FILE *f, size_t offset, char *buffer, int n){
     fseek(f, offset, SEEK_SET);
     return fread(buffer, 1, n, f);
 }
@@ -29,8 +29,7 @@ void write_to_output(char *buffer, int n){
 int main(int argc, char **argv){
     FILE *f;
     char *zBuf;
-    int ofst, n;
-    size_t got;
+    size_t ofst, n, got;
 
     if(argc!=4){
         display_usage(*argv);
@@ -42,29 +41,32 @@ int main(int argc, char **argv){
         return 1;
     }
 
-    ofst = atoi(argv[2]);
-    n = atoi(argv[3]);
-    if(n <= 0){
+    ofst = (size_t)atoi(argv[2]);
+    n = (size_t)atoi(argv[3]);
+
+    if(n == 0){
         fprintf(stderr, "invalid amount of bytes\n");
         return 1;
     }
 
     zBuf = malloc(n);
+
     if(zBuf == NULL){
         fprintf(stderr, "out of memory\n");
         return 1;
     }
 
     got = read_from_file(f, ofst, zBuf, n);
-    fclose(f);
 
     if(got < n){
-        fprintf(stderr, "got only %d of %d bytes\n", (int)got, n);
+        fprintf(stderr, "got only %zu of %zu bytes\n", got, n);
         return 1;
     }else{
         write_to_output(zBuf, n);
     }
 
+    fclose(f);
     free(zBuf);
+
     return 0;
 }
