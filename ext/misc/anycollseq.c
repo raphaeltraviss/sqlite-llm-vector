@@ -3,13 +3,13 @@
 
 SQLITE_EXTENSION_INIT1
 
-static int cmp(void *_, int n1, const void *p1, int n2, const void *p2) {
+static int cmp(const void *p1, int n1, const void *p2, int n2) {
     if (!p1 || !p2 || n1 < 0 || n2 < 0) {
         return 0;
     }
 
-    const char* s1 = (const char*)p1;
-    const char* s2 = (const char*)p2;
+    const unsigned char* s1 = (const unsigned char*)p1;
+    const unsigned char* s2 = (const unsigned char*)p2;
     const int len = (n1 < n2) ? n1 : n2;
 
     for (int i = 0; i < len; ++i) {
@@ -21,14 +21,9 @@ static int cmp(void *_, int n1, const void *p1, int n2, const void *p2) {
     return n1 - n2;
 }
 
-static void create(sqlite3_api_routines *pRoutines, sqlite3 *db,
-                   void *NotUsed, int textRep, const char *coll) {
-
-    if (!db || !coll || !pRoutines) {
-        return;
-    }
-
-    pRoutines->sqlite3_create_collation(db, coll, textRep, NULL, cmp);
+static void create_collation(sqlite3 *db, void *NotUsed, 
+                              int textRep, const char *coll) {
+    sqlite3_create_collation(db, coll, textRep, NULL, cmp);
 }
 
 int sqlite3_anycollseq_init(sqlite3 *db, char **pzErrMsg, 
@@ -39,7 +34,7 @@ int sqlite3_anycollseq_init(sqlite3 *db, char **pzErrMsg,
     }
 
     SQLITE_EXTENSION_INIT2(pRoutines);
-    pRoutines->sqlite3_collation_needed(db, NULL, create);
+    sqlite3_collation_needed(db, NULL, create_collation);
 
     return SQLITE_OK;
 }
