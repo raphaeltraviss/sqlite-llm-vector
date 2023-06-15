@@ -1,18 +1,16 @@
 #include <sqlite3.h>
-#include <assert.h>
 #include <stdlib.h>
 
 typedef struct {
     sqlite3_int64 value;
 } ClientData;
 
-static void remember_func(sqlite3_context *, int, sqlite3_value **);
-static int sqlite3_remember_init(sqlite3 *, char **, const sqlite3_api_routines *);
+static void remember_func(sqlite3_context *ctx, int argc, sqlite3_value **argv);
+static int remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
+static void clientDataFunc(sqlite3_context *ctx, int argc, sqlite3_value **argv);
 
 static void remember_func(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
-    assert(argc == 2);
-    
-    sqlite3_int64 *ptr = sqlite3_value_pointer(argv[1], "carray");
+    sqlite3_int64 *ptr = (sqlite3_int64*)sqlite3_value_pointer(argv[1], "carray");
     if (!ptr) {
         sqlite3_result_error(ctx, "Failed to retrieve pointer value", -1);
         return;
@@ -24,10 +22,15 @@ static void remember_func(sqlite3_context *ctx, int argc, sqlite3_value **argv) 
     sqlite3_result_int64(ctx, v);
 }
 
-static int sqlite3_remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+static int remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
     int rc = SQLITE_ERROR;
-    rc = sqlite3_create_function_v2(db, "remember", 2, SQLITE_UTF8, NULL, &remember_func, NULL, NULL, &free);
+    rc = sqlite3_create_function_v2(db, "remember", 2, SQLITE_UTF8, NULL, &remember_func, NULL, NULL, NULL);
     return rc;
+}
+
+static void clientDataFunc(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
+    ClientData* clientData = (ClientData*)sqlite3_user_data(ctx);
+    sqlite3_result_int64(ctx, clientData->value);
 }
 
 int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
@@ -37,12 +40,12 @@ int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routi
         return SQLITE_ERROR;
     }
     clientData->value = 0;
-    rc = sqlite3_remember_init(db, pzErrMsg, pApi);
+    rc = remember_init(db, pzErrMsg, pApi);
     if (rc != SQLITE_OK) {
         sqlite3_free(*pzErrMsg);
         free(clientData);
         return rc;
     }
-    sqlite3_create_function_v2(db, "clientData",0, SQLITE_UTF8, clientData,&clientDataFunc, NULL,NULL, &free);
+    sqlite3_create_function_v2(db, "clientData", 0, SQLITE_UTF8, clientData, &clientDataFunc, NULL, NULL, &free);
     return rc;
 }
