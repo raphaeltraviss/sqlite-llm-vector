@@ -21,32 +21,35 @@ static int cmp(const void *p1, int n1, const void *p2, int n2) {
     return n1 - n2;
 }
 
+// Function to create collation
 static void create_collation(sqlite3 *db, void *NotUsed, 
                               int textRep, const char *coll) {
-    sqlite3_create_collation(db, coll, textRep, NULL, cmp);
+    // Check if db and coll are not null and textRep is valid.
+    if (db && coll && textRep) {
+        // Create the collation
+        sqlite3_create_collation(db, coll, textRep, NULL, cmp);
+    }
 }
 
+// Function to initialize any collation sequence.
 int sqlite3_anycollseq_init(sqlite3 *db, char **pzErrMsg, 
                             const sqlite3_api_routines *pRoutines) {
 
+    // Check if db and pRoutines are not null.
     if (!db || !pRoutines) {
         return SQLITE_ERROR;
     }
 
     SQLITE_EXTENSION_INIT2(pRoutines);
-
-    if (sqlite3_collation_needed(db, NULL, create_collation)) {
-        return SQLITE_ERROR;
+    
+    // Try to create the collation
+    int err = sqlite3_collation_needed(db, NULL, create_collation);
+    if (err != SQLITE_OK) {
+        // Set the error message if collation creation fails
+        *pzErrMsg = sqlite3_mprintf("Collation creation failed: %s", 
+            sqlite3_errstr(err));
+        return err;
     }
 
     return SQLITE_OK;
-} 
-
-/*
-## Changes Made
-- Handled the error that may occur during the creation of collation in a better way.
-- Replaced the old style function definitions with new style function definitions to make it more readable.
-- Used const wherever applicable.
-- Added comments where necessary.
-- Improved readability. 
-*/
+}
