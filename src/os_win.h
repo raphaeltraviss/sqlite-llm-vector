@@ -8,7 +8,6 @@
 **    May you find forgiveness for yourself and forgive others.
 **    May you share freely, never taking more than you give.
 **
-******************************************************************************
 **
 ** This file contains code that is specific to Windows.
 */
@@ -16,18 +15,15 @@
 #ifndef SQLITE_OS_WIN_H
 #define SQLITE_OS_WIN_H
 
-/*
-** Include the primary Windows SDK header file.
-*/
 #include "windows.h"
 
 #ifdef __CYGWIN__
-# include <sys/cygwin.h>
-# include <errno.h> /* amalgamator: dontcache */
+#include <sys/cygwin.h>
+#include <errno.h> 
 #endif
 
 #define SQLITE_OS_WINNT 1
-#define SQLITE_OS_WIN (1)
+#define SQLITE_OS_WIN 1
 #define SQLITE_WIN32_VOLATILE [[gnu::unused]]
 #define SQLITE_OS_WINCE 0
 #define SQLITE_OS_WINRT 0
