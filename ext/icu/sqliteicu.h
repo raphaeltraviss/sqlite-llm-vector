@@ -1,6 +1,8 @@
 #define SQLITE_USE_URI
+#define MAX_PASSWORD_LENGTH 100
 
 #include "sqlite3.h"
+#include <string.h>
 
 /*
 ** 2021 December 01
@@ -31,10 +33,16 @@ static int userAuthCallback(
   if( code==SQLITE_USER_AUTH_LOGIN ){
     /* Check the password hash stored in zArg4 against the user-supplied
     ** plain-text password provided on the command-line */
+
+    size_t pwlen = strnlen((const char*)pArg, MAX_PASSWORD_LENGTH);
     const char *zPw = (const char*)pArg;
     const char *zHash = zArg4;
-    /* (void)zArg1; // zArg1 is unused */
-    if( sqlite3_user_authenticate_hash(zPw, strlen(zPw), zHash) ){
+
+    if (pwlen == MAX_PASSWORD_LENGTH) {
+        // Password string reached the maximum length allowed, so ignore it.
+        return SQLITE_AUTH_USER;   
+    }
+    if( sqlite3_user_authenticate_hash(zPw, pwlen, zHash) ){
       return SQLITE_OK;
     }
     sqlite3_log(SQLITE_ERROR, "authentication failed");
@@ -62,19 +70,24 @@ int main(int argc, char **argv){
     sqlite3_errmsg(db);
     return rc;
   }
-#ifdef SQLITE_USER_AUTHENTICATION
-  if( argc>=4 ){
-    zPw = argv[3];
-    sqlite3_set_authorizer(db, userAuthCallback, (void*)zPw);
-  }
-#endif
 
 #ifdef SQLITE_USER_AUTHENTICATION
   if( argc>=4 ){
-    zPw = argv[3];
+    const char *entered_pw = argv[3];
+    size_t pw_len = strnlen(entered_pw, MAX_PASSWORD_LENGTH);
+    if (pw_len == MAX_PASSWORD_LENGTH) {
+        // Password string reached the maximum length allowed, so ignore it.
+        sqlite3_close(db);
+        return SQLITE_AUTH_USER;     
+    }
+    char password[pw_len];
+    strncpy(password, entered_pw, pw_len);
+    zPw = password;
     sqlite3_set_authorizer(db, userAuthCallback, (void*)zPw);
+    memset(password, 0x00, pw_len); // Clear the password from memory
   }
 #endif
+
   rc = sqlite3_exec(db, argv[2], 0, 0, &zErrMsg);
   if( rc!=SQLITE_OK ){
     sqlite3_errmsg(db);

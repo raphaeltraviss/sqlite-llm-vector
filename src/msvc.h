@@ -1,25 +1,13 @@
-/*
-** 2015 January 12
-**
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-**
-******************************************************************************
-**
-** This file contains code that is specific to MSVC.
-*/
-#ifndef SQLITE_MSVC_H
-#define SQLITE_MSVC_H
-
-#if defined(_MSC_VER)
 #define DISABLE_WARNING(n) \
     __pragma(warning(push)) \
     __pragma(warning(disable : n))
 
+#define END_DISABLE_WARNING(n) __pragma(warning(pop))
+
+#ifndef SQLITE_MSVC_H
+#define SQLITE_MSVC_H
+
+#if defined(_MSC_VER)
 DISABLE_WARNING(4054)
 DISABLE_WARNING(4055)
 DISABLE_WARNING(4100)
@@ -35,8 +23,6 @@ DISABLE_WARNING(4305)
 DISABLE_WARNING(4306)
 DISABLE_WARNING(4702)
 DISABLE_WARNING(4706)
-#define END_DISABLE_WARNING(n) __pragma(warning(pop))
-
 END_DISABLE_WARNING(4054)
 END_DISABLE_WARNING(4055)
 END_DISABLE_WARNING(4100)
@@ -52,7 +38,6 @@ END_DISABLE_WARNING(4305)
 END_DISABLE_WARNING(4306)
 END_DISABLE_WARNING(4702)
 END_DISABLE_WARNING(4706)
-
 #endif /* defined(_MSC_VER) */
 
 #if defined(_MSC_VER) && !defined(_WIN64)

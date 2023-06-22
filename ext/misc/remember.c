@@ -1,49 +1,51 @@
-/*
-** 2016-08-09
-**
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-*/
+#include <sqlite3.h>
+#include <stdlib.h>
 
-#include "sqlite3ext.h"
-SQLITE_EXTENSION_INIT1
+typedef struct {
+    sqlite3_int64 value;
+} ClientData;
 
-#include <assert.h>
+static void remember_func(sqlite3_context *ctx, int argc, sqlite3_value **argv);
+static int remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
+static void clientDataFunc(sqlite3_context *ctx, int argc, sqlite3_value **argv);
 
-/**
- * Remember function
- * 
- * Return the integer value V. Also, save the value of V in a
- * C-language variable whose address is PTR.
- */
-static void rememberFunc(sqlite3_context *ctx, int argc, sqlite3_value **argv)
-{
-    sqlite3_int64 v;
-    sqlite3_int64 *ptr;
-    assert(argc == 2);
-
-    v = sqlite3_value_int64(argv[0]);
-    ptr = sqlite3_value_pointer(argv[1], "carray");
-
-    if (ptr) {
-        *ptr = v;
+static void remember_func(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
+    sqlite3_int64 *ptr = (sqlite3_int64*)sqlite3_value_pointer(argv[1], "carray");
+    if (!ptr) {
+        sqlite3_result_error(ctx, "Failed to retrieve pointer value", -1);
+        return;
     }
-
+    ClientData *data = (ClientData*)sqlite3_user_data(ctx);
+    sqlite3_int64 v = sqlite3_value_int64(argv[0]);
+    *ptr = v;
+    data->value = v;
     sqlite3_result_int64(ctx, v);
 }
 
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-int sqlite3_remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi)
-{
-    SQLITE_EXTENSION_INIT2(pApi);
+static int remember_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+    int rc = SQLITE_ERROR;
+    rc = sqlite3_create_function_v2(db, "remember", 2, SQLITE_UTF8, NULL, &remember_func, NULL, NULL, NULL);
+    return rc;
+}
 
-    int rc = sqlite3_create_function(db, "remember", 2, SQLITE_UTF8, 0, rememberFunc, 0, 0);
+static void clientDataFunc(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
+    ClientData* clientData = (ClientData*)sqlite3_user_data(ctx);
+    sqlite3_result_int64(ctx, clientData->value);
+}
 
+int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+    int rc = SQLITE_ERROR;
+    ClientData* clientData = (ClientData*)malloc(sizeof(ClientData));
+    if (!clientData) {
+        return SQLITE_ERROR;
+    }
+    clientData->value = 0;
+    rc = remember_init(db, pzErrMsg, pApi);
+    if (rc != SQLITE_OK) {
+        sqlite3_free(*pzErrMsg);
+        free(clientData);
+        return rc;
+    }
+    sqlite3_create_function_v2(db, "clientData", 0, SQLITE_UTF8, clientData, &clientDataFunc, NULL, NULL, &free);
     return rc;
 }

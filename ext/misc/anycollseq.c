@@ -1,20 +1,55 @@
-#define CMP(p1, p2, n) (rc = memcmp(p1, p2, n)) == 0 ? nKey1 - nKey2 : rc
+#include <string.h>
+#include <sqlite3ext.h>
 
-static int anyCollFunc(void *NotUsed, int nKey1, const void *pKey1, int nKey2, const void *pKey2) {
-    int rc, n = nKey1 < nKey2 ? nKey1 : nKey2;
-    return CMP(pKey1, pKey2, n);
+SQLITE_EXTENSION_INIT1
+
+static int cmp(const void *p1, int n1, const void *p2, int n2) {
+    if (!p1 || !p2 || n1 < 0 || n2 < 0) {
+        return 0;
+    }
+
+    const unsigned char* s1 = (const unsigned char*)p1;
+    const unsigned char* s2 = (const unsigned char*)p2;
+    const int len = (n1 < n2) ? n1 : n2;
+
+    for (int i = 0; i < len; ++i) {
+        if (s1[i] != s2[i]) {
+            return (s1[i] > s2[i]) ? 1 : -1;
+        }
+    }
+
+    return n1 - n2;
 }
 
-static void anyCollNeeded(void *NotUsed, sqlite3 *db, int eTextRep, const char *zCollName) {
-    sqlite3_create_collation(db, zCollName, eTextRep, 0, anyCollFunc); 
+// Function to create collation
+static void create_collation(sqlite3 *db, void *NotUsed, 
+                              int textRep, const char *coll) {
+    // Check if db and coll are not null and textRep is valid.
+    if (db && coll && textRep) {
+        // Create the collation
+        sqlite3_create_collation(db, coll, textRep, NULL, cmp);
+    }
 }
 
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-int sqlite3_anycollseq_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
-    int rc = SQLITE_OK;
-    SQLITE_EXTENSION_INIT2(pApi);
-    rc = sqlite3_collation_needed(db, 0, anyCollNeeded);
-    return rc;
+// Function to initialize any collation sequence.
+int sqlite3_anycollseq_init(sqlite3 *db, char **pzErrMsg, 
+                            const sqlite3_api_routines *pRoutines) {
+
+    // Check if db and pRoutines are not null.
+    if (!db || !pRoutines) {
+        return SQLITE_ERROR;
+    }
+
+    SQLITE_EXTENSION_INIT2(pRoutines);
+    
+    // Try to create the collation
+    int err = sqlite3_collation_needed(db, NULL, create_collation);
+    if (err != SQLITE_OK) {
+        // Set the error message if collation creation fails
+        *pzErrMsg = sqlite3_mprintf("Collation creation failed: %s", 
+            sqlite3_errstr(err));
+        return err;
+    }
+
+    return SQLITE_OK;
 }
