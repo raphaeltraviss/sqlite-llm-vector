@@ -22,8 +22,8 @@ static int cmp(const void *p1, int n1, const void *p2, int n2) {
 }
 
 // Function to create collation
-static void create_collation(sqlite3 *db, void *NotUsed, 
-                              int textRep, const char *coll) {
+static void create_collation(void *ctx, int textRep, const char *coll, void *pAux) {
+    sqlite3* db = (sqlite3*)ctx;
     // Check if db and coll are not null and textRep is valid.
     if (db && coll && textRep) {
         // Create the collation
@@ -41,9 +41,9 @@ int sqlite3_anycollseq_init(sqlite3 *db, char **pzErrMsg,
     }
 
     SQLITE_EXTENSION_INIT2(pRoutines);
-    
+    int err;
     // Try to create the collation
-    int err = sqlite3_collation_needed(db, NULL, create_collation);
+    err = sqlite3_collation_needed(db, (void *)db, create_collation);
     if (err != SQLITE_OK) {
         // Set the error message if collation creation fails
         *pzErrMsg = sqlite3_mprintf("Collation creation failed: %s", 
