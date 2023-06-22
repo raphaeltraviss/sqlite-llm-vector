@@ -5,32 +5,36 @@
 #define MAX_LIBRARY_VERSION_LENGTH 256
 #define MAX_SOURCE_ID_LENGTH 256
 
-static int init_sqlite(sqlite3 **db) {
+typedef struct {
+    sqlite3 *db;
+} Database;
+
+static int init_sqlite(Database *db) {
     int rc = sqlite3_initialize();
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to initialize SQLite library: %s\n", sqlite3_errstr(rc)); 
+        fprintf(stderr, "Failed to initialize SQLite library: %s\n", sqlite3_errstr(rc));
         return rc;
     }
 
-    rc = sqlite3_open(":memory:", db);
+    rc = sqlite3_open(":memory:", &(db->db));
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to create database connection: %s\n", sqlite3_errmsg(*db));
+        fprintf(stderr, "Failed to create database connection: %s\n", sqlite3_errmsg(db->db));
         return rc;
     }
-    
+
     return SQLITE_OK;
 }
 
-static int shutdown_sqlite(sqlite3 *db) {
-    int rc = sqlite3_close(db);
+static int shutdown_sqlite(Database *db) {
+    int rc = sqlite3_close(db->db);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to close SQLite library: %s\n", sqlite3_errmsg(db));
+        fprintf(stderr, "Failed to close SQLite library: %s\n", sqlite3_errmsg(db->db));
         return rc;
     }
 
     rc = sqlite3_shutdown();
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to shutdown SQLite library: %s\n", sqlite3_errstr(rc)); 
+        fprintf(stderr, "Failed to shutdown SQLite library: %s\n", sqlite3_errstr(rc));
         return rc;
     }
     return SQLITE_OK;
@@ -60,7 +64,7 @@ static void print_library_version_and_source_id() {
 
 int main(int argc, char **argv) {
     int rc = EXIT_SUCCESS;
-    sqlite3 *db = NULL;
+    Database db;
 
     rc = init_sqlite(&db);
     if (rc != SQLITE_OK) {
@@ -70,9 +74,9 @@ int main(int argc, char **argv) {
     print_library_version_and_source_id();
 
 cleanup:
-    rc = shutdown_sqlite(db);
+    rc = shutdown_sqlite(&db);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to shutdown SQLite library: %s\n", sqlite3_errstr(rc)); 
+        fprintf(stderr, "Failed to shutdown SQLite library: %s\n", sqlite3_errstr(rc));
         return EXIT_FAILURE;
     }
 
