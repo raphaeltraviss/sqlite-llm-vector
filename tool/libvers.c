@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sqlite3.h>
 
 #define MAX_LIBRARY_VERSION_LENGTH 256
@@ -18,6 +19,7 @@ static int init_sqlite(Database *db) {
 
     rc = sqlite3_open(":memory:", &(db->db));
     if (rc != SQLITE_OK) {
+        sqlite3_shutdown();
         fprintf(stderr, "Failed to create database connection: %s\n", sqlite3_errmsg(db->db));
         return rc;
     }
@@ -40,8 +42,18 @@ static int shutdown_sqlite(Database *db) {
     return SQLITE_OK;
 }
 
+static char* safe_copy_string(const char* str) {
+    size_t length = strlen(str);
+    char* copy = malloc(length + 1);
+    if (copy != NULL) {
+        memcpy(copy, str, length + 1);
+    }
+    return copy;
+}
+
 static void print_library_version_and_source_id() {
-    char version[MAX_LIBRARY_VERSION_LENGTH], source[MAX_SOURCE_ID_LENGTH];
+    char version[MAX_LIBRARY_VERSION_LENGTH];
+    char source[MAX_SOURCE_ID_LENGTH];
 
     const char *lib_version = sqlite3_libversion();
     if (lib_version == NULL) {
@@ -55,11 +67,24 @@ static void print_library_version_and_source_id() {
         return;
     }
 
-    snprintf(version, MAX_LIBRARY_VERSION_LENGTH, "%s", lib_version);
-    snprintf(source, MAX_SOURCE_ID_LENGTH, "%s", source_id);
+    char *version_copy = safe_copy_string(lib_version);
+    char *source_copy = safe_copy_string(source_id);
 
-    printf("SQLite version %s\n", version);
-    printf("SQLite source  %s\n", source);
+    if (version_copy == NULL || source_copy == NULL) {
+        fprintf(stderr, "Memory allocation failed");
+        free(version_copy);
+        free(source_copy);
+        return;
+    }
+
+    strncpy(version, version_copy, MAX_LIBRARY_VERSION_LENGTH);
+    strncpy(source, source_copy, MAX_SOURCE_ID_LENGTH);
+
+    printf("SQLite version: %s\n", version);
+    printf("SQLite source: %s\n", source);
+
+    free(version_copy);
+    free(source_copy);
 }
 
 int main(int argc, char **argv) {
